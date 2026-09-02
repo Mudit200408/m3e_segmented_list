@@ -1,14 +1,29 @@
 name: m3e_segmented_list
-description: "A new Flutter project."
-publish_to: 'none'
-version: 0.1.0+1
+description: "A Flutter package providing expressive Material 3 segmented lists with dynamically rounded corners and selection support."
+version: 0.0.1
+homepage: https://github.com/Mudit200408/m3e_segmented_list
+repository: https://github.com/Mudit200408/m3e_segmented_list
+issue_tracker: https://github.com/Mudit200408/m3e_segmented_list/issues
+
+topics:
+  - ui
+  - material-3-expressive
+  - segmented-list
 
 environment:
-  sdk: ^3.13.0
+  sdk: ^3.11.0
+  flutter: ">=3.47.0"
 
 dependencies:
   flutter:
     sdk: flutter
+  material_ui: ^1.0.0
+  motor: ^1.1.0
+  m3e_haptics: ">=0.0.1 <2.0.0"
+
+dependency_overrides:
+  m3e_haptics:
+    path: ../m3e_haptics
 
 dev_dependencies:
   flutter_test:
