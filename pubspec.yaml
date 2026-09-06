@@ -1,6 +1,6 @@
 name: m3e_segmented_list
 description: "A Flutter package providing expressive Material 3 segmented lists with dynamically rounded corners and selection support."
-version: 0.0.1
+version: 0.0.2
 homepage: https://github.com/Mudit200408/m3e_segmented_list
 repository: https://github.com/Mudit200408/m3e_segmented_list
 issue_tracker: https://github.com/Mudit200408/m3e_segmented_list/issues

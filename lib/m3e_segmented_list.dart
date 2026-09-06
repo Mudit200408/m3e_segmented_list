@@ -7,6 +7,7 @@
 ///
 /// - `M3ESegmentedList` - Interactive segmented list with selection support
 /// - `M3ESegmentedColumn` - Static segmented column for small lists
+/// - `M3ESegmentedRow` - Static horizontal segmented row
 /// - `SliverM3ESegmentedList` - Sliver variant for CustomScrollView
 /// - `M3ESegmentedItem` - Individual segmented item widget
 /// - `M3EExpandableSegmentedItem` - Expandable folder-like item

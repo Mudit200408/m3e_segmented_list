@@ -4,7 +4,7 @@
 
 A Flutter package providing expressive, Material 3 segmented list components with dynamically rounded corners, selection support, and spring-physics motion. Items automatically morph their corner radii (larger outer radii on the first and last items, smaller inner radii between adjoining items) to adhere to Material 3's expressive list design.
 
-It provides multiple list variants — an interactive list (`M3ESegmentedList`), a static column (`M3ESegmentedColumn`), a sliver variant (`SliverM3ESegmentedList`), and a spring-physics reorderable list (`M3EReorderableSegmentedList`) — plus expandable folder-like items (`M3EExpandableSegmentedItem`), single/multi selection modes with animated checkmark badges, and rich customization via `M3ESegmentedListDecoration`.
+It provides multiple list variants — an interactive list (`M3ESegmentedList`), a static column (`M3ESegmentedColumn`), a static row (`M3ESegmentedRow`), a sliver variant (`SliverM3ESegmentedList`), and a spring-physics reorderable list (`M3EReorderableSegmentedList`) — plus expandable folder-like items (`M3EExpandableSegmentedItem`), single/multi selection modes with animated checkmark badges, zero-layout-impact focus rings with full keyboard navigation, and rich customization via `M3ESegmentedListDecoration`.
 
 ---
 
@@ -16,16 +16,18 @@ You can try out the package demo here: [m3e_core demo](https://mudit200408.githu
 
 ## 🚀 Features
 
-- **Dynamic Corner Morphing** — outer/inner radii automatically assigned per item position, spring-animated on every state change
+- **Dynamic Corner Morphing** — outer/inner radii automatically assigned per item position (vertical & horizontal), spring-animated on every state change
 - **Selection Modes** — single (radio behavior) or multiple selection with tap/long-press triggers and an animated checkmark badge
-- **Spring-Physics Reordering** — `M3EReorderableSegmentedList` with a dynamic destination placeholder slot, bouncy neighbor displacement, and smooth snap settling
-- **Expandable Items** — `M3EExpandableSegmentedItem` folder-like parent-child containers with staggered cascade motion
-- **Multiple Variants** — Column-based, `ListView.builder`-based, static, and sliver list layouts
+- **Spring-Physics Reordering** — `M3EReorderableSegmentedList` with 2D lift-off shift, dynamic destination placeholder slot, bouncy neighbor displacement, and smooth snap settling
+- **Expandable Items** — `M3EExpandableSegmentedItem` folder-like parent-child containers with staggered cascade motion and nested keyboard traversal
+- **Horizontal & Vertical Variants** — `M3ESegmentedRow`, `M3ESegmentedColumn`, `M3ESegmentedList.builder`, and `SliverM3ESegmentedList` layouts
+- **Pressed Scale Micro-Interactions** — spring-driven content scale compression on pointer down / tap
+- **Keyboard Navigation & Focus Rings** — zero-layout-impact `SegmentedFocusRing` with concentric corner contours, arrow navigation, Enter/Space activation, and Alt+Arrow reordering
+- **Expressive Splash & Motion** — default `InkSparkle` splash effect with spring presets via `M3EMotion`
 - **Haptic Feedback** — light, medium, or heavy impact on interaction via `M3EHapticFeedback`
-- **Expressive Motion** — spring motion presets via `M3EMotion` for radius morphing and selection transitions
-- **State Styling** — dedicated color, border, radius, and elevation tokens for disabled, focused, hovered, pressed, and selected states
-- **Accessibility** — semantic label builder, keyboard focus with visual highlight, and mouse cursor support
-- **Custom Decoration** — geometry, colors, borders, elevation, motion, and drag styling via `M3ESegmentedListDecoration`
+- **State Styling** — dedicated color, border, radius, elevation, and scale tokens for disabled, focused, hovered, pressed, and selected states
+- **Accessibility** — semantic label builder, keyboard focus rings, single-tab group traversal, and mouse cursor support
+- **Custom Decoration** — geometry, colors, borders, elevation, motion, scale, and drag styling via `M3ESegmentedListDecoration`
 
 ---
 
@@ -42,7 +44,7 @@ Add `m3e_segmented_list` and `material_ui` to your `pubspec.yaml`:
 ```yaml
 dependencies:
   material_ui: ^1.0.0
-  m3e_segmented_list: ^0.0.1
+  m3e_segmented_list: ^0.0.2
 ```
 
 ```dart
@@ -64,6 +66,19 @@ M3ESegmentedList(
     headline: Text('Person $index'),
     supportingText: const Text('Tap to interact'),
   ),
+)
+```
+
+### Horizontal Segmented Row
+
+```dart
+M3ESegmentedRow(
+  children: const [
+    M3EListItem(headline: Text('Day')),
+    M3EListItem(headline: Text('Week')),
+    M3EListItem(headline: Text('Month')),
+    M3EListItem(headline: Text('Year')),
+  ],
 )
 ```
 
@@ -274,7 +289,10 @@ Styling, geometry, motion, and interaction overrides for all segmented list vari
 | `highlightColor` | `Color?` | — | Highlight color for presses |
 | `hoverColor` | `Color?` | — | Hover color for mouse hover |
 | `focusColor` | `Color?` | — | Focus color for keyboard focus highlight |
-| `splashFactory` | `InteractiveInkFeatureFactory?` | — | Custom splash factory for ink ripples |
+| `focusRingColor` | `Color?` | `ColorScheme.primary` | Focus ring stroke color |
+| `focusRingWidth` | `double` | `2.0` | Focus ring outline stroke width |
+| `focusRingGap` | `double` | `4.0` | Outset gap between item and focus ring |
+| `splashFactory` | `InteractiveInkFeatureFactory?` | `InkSparkle.splashFactory` | Custom splash factory for ink ripples (defaults to `InkSparkle`) |
 | `enableFeedback` | `bool` | `true` | Whether acoustic/haptic feedback is enabled |
 | `haptic` | `M3EHapticFeedback` | `none` | Haptic feedback level on interaction |
 | `disabledColor` | `Color?` | — | Background color for disabled items |
@@ -293,6 +311,7 @@ Styling, geometry, motion, and interaction overrides for all segmented list vari
 | `selectionCheckmarkAlignment` | `Alignment` | `centerRight` | Alignment of the checkmark badge |
 | `pressedRadius` | `double?` | — | Corner radius applied to all corners when pressed |
 | `pressedBorderRadius` | `BorderRadius?` | — | Custom border radius when pressed |
+| `pressedScale` | `double?` | — | Inner content scale factor when pressed (e.g. `0.98`) |
 | `hoveredRadius` | `double?` | — | Corner radius applied to all corners when hovered |
 | `hoveredBorderRadius` | `BorderRadius?` | — | Custom border radius when hovered |
 | `motion` | `M3EMotion` | `expressiveSpatialFast` | Spring motion for normal and selection transitions |
@@ -427,6 +446,37 @@ Static segmented column built from an explicit list of `children` — ideal for 
 | `pressedRadius` / `pressedBorderRadius` / `hoveredRadius` / `hoveredBorderRadius` | — | — | Interactive morphing radii |
 | `showSelectionCheckmark` / `selectionCheckmarkAlignment` / `selectionCheckmarkBuilder` | — | — | Checkmark badge customization |
 | `motion` / `pressedMotion` | `M3EMotion` | `expressiveSpatialFast` | Spring motion presets |
+
+#### `M3ESegmentedRow`
+
+Static horizontal segmented row built from an explicit list of `children` — with asymmetric left-to-right dynamic corner radius morphing (first item rounded on the left, last item rounded on the right, inner items smaller). Supports horizontal sizing options (`equalWidth`, `equalHeight`, `flexes`).
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `children` | `List<Widget>` | — | The static list of children to display horizontally |
+| `equalWidth` | `bool` | `true` | Whether each child expands equally to fill horizontal width |
+| `equalHeight` | `bool` | `true` | Whether each item stretches to match the tallest item |
+| `flexes` | `List<int>?` | — | Optional per-item flex factors (overrides `equalWidth`) |
+| `mainAxisAlignment` | `MainAxisAlignment` | `start` | Alignment of children along the main horizontal axis |
+| `crossAxisAlignment` | `CrossAxisAlignment` | `center` | Alignment of children along the cross vertical axis |
+| `mainAxisSize` | `MainAxisSize` | `max` | How much space the row occupies along the main axis |
+| `decoration` | `M3ESegmentedListDecoration?` | — | Styling, motion, and interaction overrides |
+| `outerRadius` / `innerRadius` / `gap` | `double` | `24.0` / `4.0` / `2.0` | Geometry settings |
+| `onTap` / `onLongPress` | `void Function(int index)?` | — | Item interaction callbacks |
+| `selectedIndices` / `onSelectionChanged` / `selectionMode` / `selectionTrigger` | — | — | Full selection API |
+| `selectedColor` / `selectedBorder` / `selectedRadius` / `selectedElevation` | — | — | Selected state styling |
+| `motion` / `pressedMotion` | `M3EMotion` | `expressiveSpatialFast` | Spring motion presets |
+
+```dart
+M3ESegmentedRow(
+  equalWidth: true,
+  children: const [
+    M3EListItem(headline: Text('List')),
+    M3EListItem(headline: Text('Board')),
+    M3EListItem(headline: Text('Timeline')),
+  ],
+)
+```
 
 #### `SliverM3ESegmentedList`
 
@@ -565,10 +615,17 @@ M3ESegmentedList(
 
 ---
 
-### 7. Accessibility
+### 7. Accessibility & Keyboard Navigation
 
+- **Zero-Layout-Impact Focus Ring** — focused items render a `SegmentedFocusRing` with concentric corner contours that floats outside the item without shifting sibling elements.
+- **Keyboard Traversal & Activation**:
+  - `Space` / `Enter`: Activates the focused item or toggles selection.
+  - `ArrowDown` / `ArrowUp` (or `ArrowLeft` / `ArrowRight` in rows): Moves focus smoothly across adjacent items.
+  - `ArrowRight` / `ArrowLeft`: Expands or collapses expandable folder items.
+  - `Escape` (or `ArrowLeft` from first child): Collapses an expanded folder and returns focus to the header.
+  - `Alt+ArrowUp` / `Alt+ArrowDown`: Initiates accessible keyboard reordering in `M3EReorderableSegmentedList`.
+  - Single-tab group traversal keeps focus traversal predictable and clean.
 - **Semantic labels** — provide `semanticLabelBuilder` so screen readers announce meaningful item descriptions.
-- **Keyboard focus** — items are focusable with a visible focus highlight (`focusColor`, `focusedRadius`, `focusedElevation`); observe focus via `onFocusChange`.
 - **Disabled states** — the `isEnabled` per-item predicate renders full M3 disabled styling (colors, borders, no interaction).
 - **Mouse support** — `mouseCursor`, `hoverColor`, and hovered radius morphing for desktop/web.
 
@@ -576,7 +633,7 @@ M3ESegmentedList(
 
 ## 🐞 Found a bug? or ✨ You have a Feature Request?
 
-Feel free to open an [Issue](https://github.com/Mudit200408/m3e_core/issues) or [Contribute](https://github.com/Mudit200408/m3e_core/pulls) to the project.
+Feel free to open an [Issue](https://github.com/Mudit200408/m3e_segmented_list/issues) or [Contribute](https://github.com/Mudit200408/m3e_segmented_list/pulls) to the project.
 
 Hope You Love It!
 
