@@ -21,10 +21,6 @@ dependencies:
   motor: ^1.1.0
   m3e_haptics: ">=0.0.1 <2.0.0"
 
-dependency_overrides:
-  m3e_haptics:
-    path: ../m3e_haptics
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
