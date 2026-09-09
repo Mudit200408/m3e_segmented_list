@@ -6,6 +6,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'common/m3e_common.dart';
+import 'internal/_segmented_slot_geometry.dart';
 import 'm3e_segmented_item.dart';
 import 'style/m3e_segmented_list_decoration.dart';
 
@@ -205,6 +206,28 @@ class M3ESegmentedRow extends StatelessWidget {
   /// Defaults to `null` (all items enabled).
   final bool Function(int index)? isEnabled;
 
+  /// Optional predicate to determine if a specific child index occupies a slot
+  /// in the segmented layout.
+  ///
+  /// A hidden child stays mounted — so it can animate itself out — but
+  /// contributes no [gap], no inner [padding], and no corner radius: the
+  /// first / middle / last / single positions are resolved across the *visible*
+  /// children only. Without this, a child that paints nothing (a collapsed
+  /// cell, or a platform-conditional cell) still consumes a [gap] of its own
+  /// and shifts the radii of every neighbour around it.
+  ///
+  /// Hidden children are also non-interactive, excluded from keyboard focus
+  /// traversal, and omitted from [semanticLabelBuilder]. Every `index`-keyed
+  /// callback keeps reporting the raw index into [children], never the visible
+  /// ordinal.
+  ///
+  /// Because a hidden child's own [padding] is suppressed, callers that animate
+  /// a collapse should pad inside the child instead of relying on the
+  /// container's [padding].
+  ///
+  /// Defaults to `null` (all children are visible).
+  final bool Function(int index)? isVisible;
+
   /// Creates an [M3ESegmentedRow].
   const M3ESegmentedRow({
     super.key,
@@ -231,6 +254,7 @@ class M3ESegmentedRow extends StatelessWidget {
     this.enableFeedback = true,
     this.haptic = M3EHapticFeedback.none,
     this.isEnabled,
+    this.isVisible,
     this.emptyBuilder,
     this.equalWidth = true,
     this.equalHeight = true,
@@ -367,10 +391,15 @@ class M3ESegmentedRow extends StatelessWidget {
     final effectivePressedMotion = decoration?.pressedMotion ?? pressedMotion;
     final effectiveMargin = decoration?.margin ?? margin;
 
+    final slots = resolveSegmentedSlots(count: count, isVisible: isVisible);
+
     final rowChildren = List.generate(count, (index) {
-      final position = calculateSegmentedItemPosition(index, count);
+      final slot = slots[index];
+      final position = slot.position;
       final selected = _checkIsSelected(index);
-      final enabled = isEnabled?.call(index) ?? true;
+      // A hidden child must not be focusable or actionable, otherwise keyboard
+      // traversal lands on a cell that paints nothing.
+      final enabled = slot.isVisible && (isEnabled?.call(index) ?? true);
 
       final hasTap =
           enabled &&
@@ -392,8 +421,11 @@ class M3ESegmentedRow extends StatelessWidget {
         outerRadius: effectiveOuterRadius,
         innerRadius: effectiveInnerRadius,
         gap: effectiveGap,
+        // A hidden child owns no trailing gap and no inner padding, so the slot
+        // collapses to exactly zero extent once its own child does.
+        isLast: slot.isVisible ? null : true,
         color: effectiveColor,
-        padding: effectivePadding,
+        padding: slot.isVisible ? effectivePadding : EdgeInsets.zero,
         enabled: enabled,
         disabledColor: effectiveDisabledColor,
         disabledBorder: effectiveDisabledBorder,
@@ -407,7 +439,9 @@ class M3ESegmentedRow extends StatelessWidget {
         focusRingGap: effectiveFocusRingGap,
         onTap: hasTap ? _handleItemTap : null,
         onLongPress: hasLongPress ? _handleItemLongPress : null,
-        semanticLabel: semanticLabelBuilder?.call(index),
+        semanticLabel: slot.isVisible
+            ? semanticLabelBuilder?.call(index)
+            : null,
         mouseCursor: mouseCursor,
         focusColor: effectiveFocusColor,
         hoverColor: effectiveHoverColor,
@@ -444,6 +478,11 @@ class M3ESegmentedRow extends StatelessWidget {
         child: children[index],
       );
 
+      // A hidden child takes no share of the row. Handing it an Expanded slot
+      // would leave a blank stretch exactly as wide as a visible cell.
+      if (!slot.isVisible) {
+        return item;
+      }
       if (flexes != null && index < flexes!.length) {
         return Expanded(flex: flexes![index], child: item);
       } else if (equalWidth) {

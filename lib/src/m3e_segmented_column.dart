@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'common/m3e_common.dart';
+import 'internal/_segmented_slot_geometry.dart';
 import 'm3e_segmented_item.dart';
 import 'style/m3e_segmented_list_decoration.dart';
 
@@ -166,6 +167,28 @@ class M3ESegmentedColumn extends StatelessWidget {
   /// Defaults to `null` (all items enabled).
   final bool Function(int index)? isEnabled;
 
+  /// Optional predicate to determine if a specific child index occupies a slot
+  /// in the segmented layout.
+  ///
+  /// A hidden child stays mounted — so it can animate itself out — but
+  /// contributes no [gap], no inner [padding], and no corner radius: the
+  /// first / middle / last / single positions are resolved across the *visible*
+  /// children only. Without this, a child that paints nothing (a collapsed row,
+  /// or a platform-conditional row) still consumes a [gap] of its own and
+  /// shifts the radii of every neighbour around it.
+  ///
+  /// Hidden children are also non-interactive, excluded from keyboard focus
+  /// traversal, and omitted from [semanticLabelBuilder]. Every `index`-keyed
+  /// callback keeps reporting the raw index into [children], never the visible
+  /// ordinal.
+  ///
+  /// Because a hidden child's own [padding] is suppressed, callers that animate
+  /// a collapse should pad inside the child instead of relying on the
+  /// container's [padding].
+  ///
+  /// Defaults to `null` (all children are visible).
+  final bool Function(int index)? isVisible;
+
   /// Creates an [M3ESegmentedColumn].
   const M3ESegmentedColumn({
     super.key,
@@ -192,6 +215,7 @@ class M3ESegmentedColumn extends StatelessWidget {
     this.enableFeedback = true,
     this.haptic = M3EHapticFeedback.none,
     this.isEnabled,
+    this.isVisible,
     this.emptyBuilder,
     this.selectedIndices,
     this.onSelectionChanged,
@@ -319,15 +343,20 @@ class M3ESegmentedColumn extends StatelessWidget {
     final effectivePressedMotion = decoration?.pressedMotion ?? pressedMotion;
     final effectiveMargin = decoration?.margin ?? margin;
 
+    final slots = resolveSegmentedSlots(count: count, isVisible: isVisible);
+
     final column = FocusTraversalGroup(
       policy: WidgetOrderTraversalPolicy(),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: List.generate(count, (index) {
-          final position = calculateSegmentedItemPosition(index, count);
+          final slot = slots[index];
+          final position = slot.position;
           final selected = _checkIsSelected(index);
-          final enabled = isEnabled?.call(index) ?? true;
+          // A hidden child must not be focusable or actionable, otherwise
+          // keyboard traversal lands on a row that paints nothing.
+          final enabled = slot.isVisible && (isEnabled?.call(index) ?? true);
 
           final hasTap =
               enabled &&
@@ -348,8 +377,11 @@ class M3ESegmentedColumn extends StatelessWidget {
             outerRadius: effectiveOuterRadius,
             innerRadius: effectiveInnerRadius,
             gap: effectiveGap,
+            // A hidden child owns no trailing gap and no inner padding, so the
+            // slot collapses to exactly zero extent once its own child does.
+            isLast: slot.isVisible ? null : true,
             color: effectiveColor,
-            padding: effectivePadding,
+            padding: slot.isVisible ? effectivePadding : EdgeInsets.zero,
             enabled: enabled,
             disabledColor: effectiveDisabledColor,
             disabledBorder: effectiveDisabledBorder,
@@ -363,7 +395,9 @@ class M3ESegmentedColumn extends StatelessWidget {
             focusRingGap: effectiveFocusRingGap,
             onTap: hasTap ? _handleItemTap : null,
             onLongPress: hasLongPress ? _handleItemLongPress : null,
-            semanticLabel: semanticLabelBuilder?.call(index),
+            semanticLabel: slot.isVisible
+                ? semanticLabelBuilder?.call(index)
+                : null,
             mouseCursor: mouseCursor,
             focusColor: effectiveFocusColor,
             hoverColor: effectiveHoverColor,
