@@ -354,9 +354,7 @@ class M3ESegmentedColumn extends StatelessWidget {
           final slot = slots[index];
           final position = slot.position;
           final selected = _checkIsSelected(index);
-          // A hidden child must not be focusable or actionable, otherwise
-          // keyboard traversal lands on a row that paints nothing.
-          final enabled = slot.isVisible && (isEnabled?.call(index) ?? true);
+          final enabled = isEnabled?.call(index) ?? true;
 
           final hasTap =
               enabled &&
@@ -377,11 +375,13 @@ class M3ESegmentedColumn extends StatelessWidget {
             outerRadius: effectiveOuterRadius,
             innerRadius: effectiveInnerRadius,
             gap: effectiveGap,
-            // A hidden child owns no trailing gap and no inner padding, so the
-            // slot collapses to exactly zero extent once its own child does.
-            isLast: slot.isVisible ? null : true,
+            // A hidden child owns no gap and no inner padding, so its slot
+            // collapses to exactly zero extent once its own child does — while
+            // keeping its normal surface rather than flashing disabled styling
+            // for the length of the collapse.
+            isVisible: slot.isVisible,
             color: effectiveColor,
-            padding: slot.isVisible ? effectivePadding : EdgeInsets.zero,
+            padding: effectivePadding,
             enabled: enabled,
             disabledColor: effectiveDisabledColor,
             disabledBorder: effectiveDisabledBorder,
@@ -395,9 +395,7 @@ class M3ESegmentedColumn extends StatelessWidget {
             focusRingGap: effectiveFocusRingGap,
             onTap: hasTap ? _handleItemTap : null,
             onLongPress: hasLongPress ? _handleItemLongPress : null,
-            semanticLabel: slot.isVisible
-                ? semanticLabelBuilder?.call(index)
-                : null,
+            semanticLabel: semanticLabelBuilder?.call(index),
             mouseCursor: mouseCursor,
             focusColor: effectiveFocusColor,
             hoverColor: effectiveHoverColor,

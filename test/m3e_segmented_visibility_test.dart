@@ -52,6 +52,7 @@ void main() {
       expect(items[0].position, M3ESegmentedItemPosition.first);
       expect(items[1].position, M3ESegmentedItemPosition.last);
       expect(items[2].position, M3ESegmentedItemPosition.middle);
+      expect(items[2].isVisible, isFalse);
     });
 
     testWidgets('a hidden leading child does not steal the first position', (
@@ -69,6 +70,7 @@ void main() {
 
       final items = _items(tester);
       expect(items[0].position, M3ESegmentedItemPosition.middle);
+      expect(items[0].isVisible, isFalse);
       expect(items[1].position, M3ESegmentedItemPosition.first);
       expect(items[2].position, M3ESegmentedItemPosition.last);
     });
@@ -93,13 +95,12 @@ void main() {
       expect(_items(tester)[1].position, M3ESegmentedItemPosition.single);
     });
 
-    testWidgets('hidden children carry no gap, padding, or interaction', (
+    testWidgets('a hidden child keeps its surface and is not disabled', (
       tester,
     ) async {
       await tester.pumpWidget(
         _app(
           M3ESegmentedColumn(
-            padding: const EdgeInsets.all(12),
             onTap: (_) {},
             isVisible: (index) => index != 1,
             children: [_cell('A'), _cell('B'), _cell('C')],
@@ -109,18 +110,14 @@ void main() {
       await tester.pumpAndSettle();
 
       final items = _items(tester);
-      expect(items[1].isLast, isTrue);
-      expect(items[1].padding, EdgeInsets.zero);
-      expect(items[1].enabled, isFalse);
-      expect(items[1].onTap, isNull);
-
-      expect(items[0].isLast, isNull);
-      expect(items[0].padding, const EdgeInsets.all(12));
-      expect(items[0].enabled, isTrue);
-      expect(items[0].onTap, isNotNull);
+      expect(items[1].isVisible, isFalse);
+      // Hiding is not disabling: a row that is animating itself out must not
+      // flash the disabled surface for the length of the animation.
+      expect(items[1].enabled, isTrue);
+      expect(_surface(tester, 1), _surface(tester, 0));
     });
 
-    testWidgets('isVisible and isEnabled combine', (tester) async {
+    testWidgets('isVisible and isEnabled stay independent', (tester) async {
       await tester.pumpWidget(
         _app(
           M3ESegmentedColumn(
@@ -134,8 +131,11 @@ void main() {
       await tester.pumpAndSettle();
 
       final items = _items(tester);
+      expect(items[0].isVisible, isTrue);
       expect(items[0].enabled, isTrue);
-      expect(items[1].enabled, isFalse);
+      expect(items[1].isVisible, isFalse);
+      expect(items[1].enabled, isTrue);
+      expect(items[2].isVisible, isTrue);
       expect(items[2].enabled, isFalse);
       // Hidden index 1 is excluded, so A and C are first and last.
       expect(items[0].position, M3ESegmentedItemPosition.first);
@@ -144,17 +144,13 @@ void main() {
 
     testWidgets('callbacks keep reporting the raw child index', (tester) async {
       final taps = <int>[];
-      final labels = <int>[];
 
       await tester.pumpWidget(
         _app(
           M3ESegmentedColumn(
             isVisible: (index) => index != 0,
             onTap: taps.add,
-            semanticLabelBuilder: (index) {
-              labels.add(index);
-              return 'label-$index';
-            },
+            semanticLabelBuilder: (index) => 'label-$index',
             children: [const SizedBox.shrink(), _cell('A'), _cell('B')],
           ),
         ),
@@ -165,14 +161,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(taps, [2]);
-      expect(labels, [1, 2]);
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is Semantics && widget.properties.label == 'label-0',
-        ),
-        findsNothing,
-      );
+      // The hidden child is never announced, the visible one still is.
+      expect(_semanticsWithLabel('label-0'), findsNothing);
+      expect(_semanticsWithLabel('label-2'), findsOneWidget);
     });
 
     testWidgets('selection reports the raw child index', (tester) async {
@@ -210,7 +201,52 @@ void main() {
       expect(items[0].position, M3ESegmentedItemPosition.first);
       expect(items[1].position, M3ESegmentedItemPosition.middle);
       expect(items[2].position, M3ESegmentedItemPosition.last);
+      expect(items.every((item) => item.isVisible), isTrue);
       expect(items.every((item) => item.isLast == null), isTrue);
+    });
+  });
+
+  group('M3ESegmentedItem isVisible', () {
+    testWidgets('a hidden item leaves no phantom block behind', (tester) async {
+      // The container's default inner padding (12) plus its gap would leave a
+      // 26px block even for a child that paints nothing.
+      await tester.pumpWidget(
+        _app(
+          M3ESegmentedColumn(
+            isVisible: (index) => index != 1,
+            children: [_cell('A'), const SizedBox.shrink()],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final group = tester.getRect(find.byType(M3ESegmentedColumn));
+      final a = tester.getRect(find.byKey(const ValueKey('A')));
+      expect(group.height, a.height + 24);
+    });
+
+    testWidgets('a hidden item is not focusable', (tester) async {
+      await tester.pumpWidget(
+        _app(
+          M3ESegmentedColumn(
+            onTap: (_) {},
+            isVisible: (index) => index != 1,
+            children: [_cell('A'), _cell('B')],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final focuses = tester
+          .widgetList<Focus>(
+            find.descendant(
+              of: find.byType(M3ESegmentedItem).at(1),
+              matching: find.byType(Focus),
+            ),
+          )
+          .toList();
+      expect(focuses, isNotEmpty);
+      expect(focuses.first.canRequestFocus, isFalse);
     });
   });
 
@@ -248,6 +284,26 @@ void main() {
       expect(baseline, 6);
     });
 
+    testWidgets('a hidden trailing child does not steal the last position', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(
+          M3ESegmentedRow(
+            equalWidth: false,
+            isVisible: (index) => index != 2,
+            children: [_wideCell('A'), _wideCell('B'), const SizedBox.shrink()],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final items = _items(tester);
+      expect(items[0].position, M3ESegmentedItemPosition.first);
+      expect(items[1].position, M3ESegmentedItemPosition.last);
+      expect(items[1].axis, Axis.horizontal);
+    });
+
     testWidgets('a hidden child takes no share of an equal-width row', (
       tester,
     ) async {
@@ -276,26 +332,6 @@ void main() {
       expect(a.left, row.left);
       expect(c.right, row.right);
     });
-
-    testWidgets('a hidden trailing child does not steal the last position', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        _app(
-          M3ESegmentedRow(
-            equalWidth: false,
-            isVisible: (index) => index != 2,
-            children: [_wideCell('A'), _wideCell('B'), const SizedBox.shrink()],
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final items = _items(tester);
-      expect(items[0].position, M3ESegmentedItemPosition.first);
-      expect(items[1].position, M3ESegmentedItemPosition.last);
-      expect(items[1].axis, Axis.horizontal);
-    });
   });
 }
 
@@ -311,6 +347,21 @@ Widget _app(Widget child) => MaterialApp(
 
 List<M3ESegmentedItem> _items(WidgetTester tester) =>
     tester.widgetList<M3ESegmentedItem>(find.byType(M3ESegmentedItem)).toList();
+
+Finder _semanticsWithLabel(String label) => find.byWidgetPredicate(
+  (widget) => widget is Semantics && widget.properties.label == label,
+);
+
+Color? _surface(WidgetTester tester, int index) {
+  final container = find
+      .descendant(
+        of: find.byType(M3ESegmentedItem).at(index),
+        matching: find.byType(Container),
+      )
+      .first;
+  final decoration = tester.widget<Container>(container).decoration;
+  return decoration is BoxDecoration ? decoration.color : null;
+}
 
 double _verticalSeam(WidgetTester tester, String before, String after) {
   final first = tester.getRect(find.byKey(ValueKey(before)));

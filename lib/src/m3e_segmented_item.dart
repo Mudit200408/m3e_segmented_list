@@ -285,6 +285,21 @@ class M3ESegmentedItem extends StatefulWidget {
   /// ([M3ESegmentedItemPosition.last] or [M3ESegmentedItemPosition.single]).
   final bool? isLast;
 
+  /// Whether this item occupies a slot in the segmented layout.
+  ///
+  /// A hidden item keeps its normal surface, border, and elevation — it is
+  /// usually animating itself out, and repainting it as disabled would flash a
+  /// different colour for the whole length of that animation. What it gives up
+  /// is layout and interaction: no trailing gap, no inner [padding], no tap or
+  /// long-press, no keyboard focus, and no [semanticLabel].
+  ///
+  /// Containers such as `M3ESegmentedColumn` drive this from their own
+  /// `isVisible` predicate, so a child that paints nothing can no longer
+  /// consume a gap of its own or shift its neighbours' corner radii.
+  ///
+  /// Defaults to `true`.
+  final bool isVisible;
+
   /// The layout axis of the segmented container enclosing this item.
   ///
   /// Controls how directional corner radii and gaps are calculated.
@@ -348,6 +363,7 @@ class M3ESegmentedItem extends StatefulWidget {
     this.pressedMotion = M3EMotion.expressiveSpatialFast,
     this.suppressAnimation = false,
     this.isLast,
+    this.isVisible = true,
     this.onReorderKey,
   });
 
@@ -586,13 +602,16 @@ class _M3ESegmentedItemState extends State<M3ESegmentedItem> {
         ? (widget.focusedElevation ?? widget.elevation)
         : widget.elevation;
 
-    final bool isLast =
-        widget.isLast ??
-        (widget.position == M3ESegmentedItemPosition.last ||
-            widget.position == M3ESegmentedItemPosition.single);
+    // A hidden item owns no trailing gap, even when it is not the last one.
+    final bool suppressGap =
+        !widget.isVisible ||
+        (widget.isLast ??
+            (widget.position == M3ESegmentedItemPosition.last ||
+                widget.position == M3ESegmentedItemPosition.single));
 
     final hasInteraction =
         widget.enabled &&
+        widget.isVisible &&
         (widget.onTap != null ||
             widget.onLongPress != null ||
             widget.onReorderKey != null);
@@ -663,8 +682,8 @@ class _M3ESegmentedItemState extends State<M3ESegmentedItem> {
             widget.isSelected != _wasSelected);
 
     final gapPadding = widget.axis == Axis.vertical
-        ? EdgeInsets.only(bottom: isLast ? 0 : widget.gap)
-        : EdgeInsets.only(right: isLast ? 0 : widget.gap);
+        ? EdgeInsets.only(bottom: suppressGap ? 0 : widget.gap)
+        : EdgeInsets.only(right: suppressGap ? 0 : widget.gap);
 
     Widget item = Padding(
       padding: gapPadding,
@@ -694,7 +713,7 @@ class _M3ESegmentedItemState extends State<M3ESegmentedItem> {
               child: Focus(
                 focusNode: _effectiveFocusNode,
                 autofocus: widget.autofocus,
-                canRequestFocus: widget.enabled,
+                canRequestFocus: widget.enabled && widget.isVisible,
                 onFocusChange: (focused) {
                   if (mounted && _isFocused != focused) {
                     setState(() => _isFocused = focused);
@@ -723,7 +742,10 @@ class _M3ESegmentedItemState extends State<M3ESegmentedItem> {
                           widget.haptic.apply();
                         }
                       : null,
-                  onLongPress: widget.enabled && widget.onLongPress != null
+                  onLongPress:
+                      widget.enabled &&
+                          widget.isVisible &&
+                          widget.onLongPress != null
                       ? () {
                           widget.onLongPress!(widget.index);
                           widget.haptic.apply();
@@ -737,7 +759,12 @@ class _M3ESegmentedItemState extends State<M3ESegmentedItem> {
                         }
                       : null,
                   child: Padding(
-                    padding: widget.padding ?? const EdgeInsets.all(12.0),
+                    // A hidden item keeps no inner padding either, otherwise the
+                    // container's own padding would leave a phantom block behind
+                    // for as long as the child takes to collapse.
+                    padding: widget.isVisible
+                        ? (widget.padding ?? const EdgeInsets.all(12.0))
+                        : EdgeInsets.zero,
                     child:
                         widget.pressedScale != null &&
                             widget.pressedScale != 1.0
@@ -769,7 +796,7 @@ class _M3ESegmentedItemState extends State<M3ESegmentedItem> {
       ),
     );
 
-    if (widget.semanticLabel != null) {
+    if (widget.semanticLabel != null && widget.isVisible) {
       item = Semantics(
         label: widget.semanticLabel,
         selected: widget.isSelected,
