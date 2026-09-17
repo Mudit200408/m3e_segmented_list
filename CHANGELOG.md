@@ -1,3 +1,7 @@
+# 0.0.3
+- segmented-list: let `M3ESegmentedItem` own `isVisible` so hidden items keep their surface (contributed by [Hsukqi Lee](https://github.com/Hsukqi))
+- segmented-list: add `isVisible` to exclude hidden children from gap and radius math (contributed by [Hsukqi Lee](https://github.com/Hsukqi))
+
 # 0.0.2
 - segmented-list: Add M3ESegmentedRow
 - segmented-list: add pressed scale micro-interaction support

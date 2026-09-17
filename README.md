@@ -26,6 +26,7 @@ You can try out the package demo here: [m3e_core demo](https://mudit200408.githu
 - **Expressive Splash & Motion** — default `InkSparkle` splash effect with spring presets via `M3EMotion`
 - **Haptic Feedback** — light, medium, or heavy impact on interaction via `M3EHapticFeedback`
 - **State Styling** — dedicated color, border, radius, elevation, and scale tokens for disabled, focused, hovered, pressed, and selected states
+- **Slot & Item Visibility** — `isVisible` predicate excludes hidden or collapsed items from gap and corner radius math, while preserving raw index mapping for callbacks and selection
 - **Accessibility** — semantic label builder, keyboard focus rings, single-tab group traversal, and mouse cursor support
 - **Custom Decoration** — geometry, colors, borders, elevation, motion, scale, and drag styling via `M3ESegmentedListDecoration`
 
@@ -43,8 +44,8 @@ Add `m3e_segmented_list` and `material_ui` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  material_ui: ^1.0.0
-  m3e_segmented_list: ^0.0.2
+  material_ui: ^1.3.0
+  m3e_segmented_list: ^0.0.3
 ```
 
 ```dart
@@ -440,6 +441,7 @@ Static segmented column built from an explicit list of `children` — ideal for 
 | `mouseCursor` / `focusColor` / `hoverColor` / `onFocusChange` | — | — | Mouse & focus interaction overrides |
 | `border` / `elevation` / `splashColor` / `highlightColor` / `splashFactory` / `enableFeedback` / `haptic` | — | — | Ink & feedback styling |
 | `isEnabled` | `bool Function(int index)?` | — | Predicate determining if a child is enabled |
+| `isVisible` | `bool Function(int index)?` | — | Predicate to exclude hidden items from gap and corner radius calculations |
 | `emptyBuilder` | `Widget?` | — | Widget displayed when children is empty |
 | `selectedIndices` / `onSelectionChanged` / `selectionMode` / `selectionTrigger` / `isSelected` | — | — | Selection API (see `M3ESegmentedList`) |
 | `selectedColor` / `selectedBorder` / `selectedRadius` / `selectedBorderRadius` / `selectedElevation` | — | — | Selected state styling |
@@ -462,6 +464,8 @@ Static horizontal segmented row built from an explicit list of `children` — wi
 | `mainAxisSize` | `MainAxisSize` | `max` | How much space the row occupies along the main axis |
 | `decoration` | `M3ESegmentedListDecoration?` | — | Styling, motion, and interaction overrides |
 | `outerRadius` / `innerRadius` / `gap` | `double` | `24.0` / `4.0` / `2.0` | Geometry settings |
+| `isEnabled` | `bool Function(int index)?` | — | Predicate determining if a child is enabled |
+| `isVisible` | `bool Function(int index)?` | — | Predicate to exclude hidden items from gap and corner radius calculations |
 | `onTap` / `onLongPress` | `void Function(int index)?` | — | Item interaction callbacks |
 | `selectedIndices` / `onSelectionChanged` / `selectionMode` / `selectionTrigger` | — | — | Full selection API |
 | `selectedColor` / `selectedBorder` / `selectedRadius` / `selectedElevation` | — | — | Selected state styling |
@@ -587,7 +591,7 @@ Material 3 standardized list item slot widget used as item content. Automatic la
 
 #### `M3ESegmentedItem`
 
-The individual segmented item building block with spring-driven morphing corner radii. Exposes `index`, `position` (`M3ESegmentedItemPosition`), `child`, geometry (`outerRadius`/`innerRadius`/`gap`), full state styling, `focusNode`/`autofocus`, selection, checkmark, and motion parameters — all of which are managed automatically when using the list widgets above.
+The individual segmented item building block with spring-driven morphing corner radii. Exposes `index`, `position` (`M3ESegmentedItemPosition`), `child`, `isVisible`, geometry (`outerRadius`/`innerRadius`/`gap`), full state styling, `focusNode`/`autofocus`, selection, checkmark, and motion parameters — all of which are managed automatically when using the list widgets above.
 
 ---
 
